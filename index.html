@@ -913,326 +913,203 @@ animation: recDot 1s ease-in-out infinite;
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <script>
-// ── FLOATING DROP PARTICLES ──
-(function spawnDrops() {
-  const poster = document.getElementById('poster');
-  const colors = ['rgba(200,0,26,0.3)', 'rgba(200,0,26,0.2)', 'rgba(212,168,67,0.15)'];
-  
-  function createDrop() {
-    const d = document.createElement('div');
-    d.style.cssText = `
-      position:absolute;
-      z-index:5;
-      pointer-events:none;
-      opacity:0;
-      right:${4 + Math.random()*12}%;
-      bottom:${10 + Math.random()*20}%;
-    `;
-    const size = 4 + Math.random() * 7;
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    d.innerHTML = `<svg width="${size}" height="${size*1.3}" viewBox="0 0 10 13" fill="${color}"><path d="M5 0C5 0 0 6 0 8.5A5 5 0 0010 8.5C10 6 5 0 5 0Z"/></svg>`;
-    poster.appendChild(d);
-
-    const delay = 2 + Math.random() * 3;
-    const duration = 3 + Math.random() * 4;
-    const rise = 30 + Math.random() * 60;
-
-    d.animate([
-      { opacity: 0, transform: 'translateY(0px)' },
-      { opacity: 0.8, transform: `translateY(-${rise * 0.3}px)` },
-      { opacity: 0, transform: `translateY(-${rise}px)` }
-    ], {
-      duration: duration * 1000,
-      delay: delay * 1000,
-      easing: 'ease-out',
-      fill: 'forwards',
-      iterations: Infinity
-    });
-  }
-
-  for (let i = 0; i < 6; i++) createDrop();
-})();
-
-// ── REPLAY ──
-function replayAnimation() {
-  const animEls = document.querySelectorAll('.anim-item, .anim-left, .anim-fade, .divider-line, .divider-dot, .headline-sub');
-  animEls.forEach(el => {
-    el.style.animation = 'none';
-    el.offsetHeight; // reflow
-    el.style.animation = '';
-  });
-  document.getElementById('statusText').textContent = 'Animation replaying…';
-  setTimeout(() => {
-    document.getElementById('statusText').textContent = 'Ready to record';
-  }, 3500);
-}
-
-// ── RECORD VIDEO ──
+// ── All state ──
 let mediaRecorder = null;
 let chunks = [];
 let recording = false;
 
-async function startRecording() {
-  if (recording) return;
+// ── FLOATING DROP PARTICLES ──
+window.addEventListener('DOMContentLoaded', function () {
 
-  const btn = document.getElementById('recordBtn');
-  const dot = document.getElementById('recDot');
-  const statusText = document.getElementById('statusText');
-  const progressWrap = document.getElementById('progressWrap');
-  const progressFill = document.getElementById('progressFill');
+  var poster = document.getElementById('poster');
+  var colors = ['rgba(200,0,26,0.3)', 'rgba(200,0,26,0.2)', 'rgba(212,168,67,0.15)'];
 
-  // Check support
-  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
-    alert('⚠️ Your browser does not support screen recording from canvas.\n\nTip: Use Chrome or Edge, then try the Screen Recorder option, or use a screen recording app like OBS to capture the animation.');
-    return;
+  for (var i = 0; i < 6; i++) {
+    (function () {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:absolute;z-index:5;pointer-events:none;opacity:0;right:' + (4 + Math.random() * 12) + '%;bottom:' + (10 + Math.random() * 20) + '%;';
+      var size = 4 + Math.random() * 7;
+      var color = colors[Math.floor(Math.random() * colors.length)];
+      d.innerHTML = '<svg width="' + size + '" height="' + (size * 1.3) + '" viewBox="0 0 10 13" fill="' + color + '"><path d="M5 0C5 0 0 6 0 8.5A5 5 0 0010 8.5C10 6 5 0 5 0Z"/></svg>';
+      poster.appendChild(d);
+      var delay = 2 + Math.random() * 3;
+      var duration = 3 + Math.random() * 4;
+      var rise = 30 + Math.random() * 60;
+      d.animate(
+        [{ opacity: 0, transform: 'translateY(0px)' }, { opacity: 0.8, transform: 'translateY(-' + (rise * 0.3) + 'px)' }, { opacity: 0, transform: 'translateY(-' + rise + 'px)' }],
+        { duration: duration * 1000, delay: delay * 1000, easing: 'ease-out', iterations: Infinity }
+      );
+    })();
   }
 
-  recording = true;
-  btn.textContent = '⏹ Recording…';
-  btn.classList.add('recording');
-  document.getElementById('replayBtn').disabled = true;
-  dot.style.display = 'block';
-  progressWrap.style.display = 'block';
-  statusText.textContent = 'Recording… 5s';
-
-  // Replay animation fresh
-  replayAnimation();
-
-  // Capture poster via canvas stream
-  const poster = document.getElementById('poster');
-  
-  // Use html2canvas approach — but since we don't have that here, 
-  // we use the poster as a live DOM element and capture via a canvas stream
-  // We'll use a hidden canvas and copy the poster rendering each frame
-
-  // Fallback: Use screen capture API for the poster element
-  try {
-    // Try to use getDisplayMedia with cropping (best quality)
-    // or use canvas stream as fallback
-    const canvas = document.createElement('canvas');
-    const posterRect = poster.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = posterRect.width * dpr;
-    canvas.height = posterRect.height * dpr;
-    
-    const stream = canvas.captureStream(30);
-    chunks = [];
-
-    // Determine best codec
-    const mimeTypes = [
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm',
-      'video/mp4'
-    ];
-    let mimeType = '';
-    for (const m of mimeTypes) {
-      if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
-    }
-
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 4000000 } : {});
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'ramadan-blood-drive-animation.webm';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      stopRecordingUI();
-    };
-
-    mediaRecorder.start(100);
-
-    // Render loop: paint poster onto canvas each frame using html2canvas-style rendering
-    // We'll use a simpler approach: import html2canvas from CDN
-    // Since we are offline, we'll do a rAF loop painting via foreignObject SVG trick
-    let frameCount = 0;
-    const DURATION_MS = 5500;
-    const startTime = performance.now();
-
-    async function renderFrame() {
-      const elapsed = performance.now() - startTime;
-      const progress = Math.min(elapsed / DURATION_MS, 1);
-      progressFill.style.width = (progress * 100) + '%';
-      statusText.textContent = `Recording… ${Math.max(0, Math.ceil((DURATION_MS - elapsed)/1000))}s`;
-
-      // Paint via SVG foreignObject (works in Chrome)
-      const xml = new XMLSerializer().serializeToString(poster);
-      const svgBlob = new Blob([
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${posterRect.width}" height="${posterRect.height}">
-          <foreignObject width="${posterRect.width}" height="${posterRect.height}">
-            ${xml.replace(/xmlns="http:\/\/www\.w3\.org\/1999\/xhtml"/g,'')}
-          </foreignObject>
-        </svg>`
-      ], {type: 'image/svg+xml'});
-      const url = URL.createObjectURL(svgBlob);
-      const img = new Image();
-      img.onload = () => {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.scale(dpr, dpr);
-        ctx.drawImage(img, 0, 0);
-        ctx.setTransform(1,0,0,1,0,0);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-
-      if (elapsed < DURATION_MS) {
-        requestAnimationFrame(renderFrame);
-      } else {
-        mediaRecorder.stop();
-      }
-    }
-
-    requestAnimationFrame(renderFrame);
-
-  } catch(err) {
-    console.error(err);
+  // Check MediaRecorder support on load
+  if (!window.MediaRecorder) {
+    document.getElementById('statusText').textContent = 'Use screen recorder — see tips below';
     showFallbackInstructions();
-    stopRecordingUI();
+  }
+});
+
+// ── REPLAY ──
+function replayAnimation() {
+  var els = document.querySelectorAll('.anim-item, .anim-left, .anim-fade, .divider-line, .divider-dot, .headline-sub');
+  els.forEach(function (el) {
+    el.style.animation = 'none';
+    void el.offsetHeight;
+    el.style.animation = '';
+  });
+  var st = document.getElementById('statusText');
+  if (st) {
+    st.textContent = 'Animation replaying…';
+    setTimeout(function () { st.textContent = 'Ready to record'; }, 3500);
   }
 }
 
+// ── STOP RECORDING UI ──
 function stopRecordingUI() {
   recording = false;
-  const btn = document.getElementById('recordBtn');
+  var btn = document.getElementById('recordBtn');
   btn.textContent = '⏺ Record Video';
   btn.classList.remove('recording');
+  btn.disabled = false;
   document.getElementById('replayBtn').disabled = false;
   document.getElementById('recDot').style.display = 'none';
   document.getElementById('progressWrap').style.display = 'none';
   document.getElementById('progressFill').style.width = '0%';
   document.getElementById('statusText').textContent = 'Done! Check your downloads ✓';
-  setTimeout(() => {
-    document.getElementById('statusText').textContent = 'Ready to record';
-  }, 4000);
+  setTimeout(function () { document.getElementById('statusText').textContent = 'Ready to record'; }, 4000);
 }
 
+// ── FALLBACK MESSAGE ──
 function showFallbackInstructions() {
-  document.getElementById('statusText').textContent = 'Use screen recorder — see tip below';
-  document.querySelector('.tips').innerHTML = `
-    ⚠️ Auto-capture not supported in this browser.<br>
-    <strong style="color:rgba(255,255,255,0.6)">Option A:</strong> Use Windows Game Bar (Win+G → Record) or Mac QuickTime to record screen<br>
-    <strong style="color:rgba(255,255,255,0.6)">Option B:</strong> Open in <strong style="color:var(--gold)">Chrome</strong> and try again<br>
-    <strong style="color:rgba(255,255,255,0.6)">Option C:</strong> Use OBS Studio for high quality capture
-  `;
+  var tips = document.querySelector('.tips');
+  if (tips) {
+    tips.innerHTML =
+      '⚠️ Auto-capture unavailable in this browser.<br>' +
+      '<strong style="color:rgba(255,255,255,0.6)">Windows:</strong> Win + G → Record button (Xbox Game Bar)<br>' +
+      '<strong style="color:rgba(255,255,255,0.6)">Mac:</strong> Cmd + Shift + 5 → Record Selected Portion<br>' +
+      '<strong style="color:rgba(255,255,255,0.6)">Best option:</strong> Open in <strong style="color:#D4A843">Chrome</strong> and try again';
+  }
 }
 
-// Auto-show tips based on browser support
-window.addEventListener('load', () => {
+// ── START RECORDING ──
+async function startRecording() {
+  if (recording) return;
+
   if (!window.MediaRecorder) {
-    document.getElementById('statusText').textContent = 'Screen recorder required (see tips)';
+    showFallbackInstructions();
+    alert('Auto-record needs Chrome or Edge. See the tips below for screen recording options.');
+    return;
   }
-});
-</script>
 
-<!-- Load html2canvas for better capture -->
+  if (!window.html2canvas) {
+    alert('html2canvas library not loaded yet. Please wait a moment and try again.');
+    return;
+  }
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onload="setupBetterCapture()"></script>
+  recording = true;
+  var btn = document.getElementById('recordBtn');
+  var dot = document.getElementById('recDot');
+  var statusText = document.getElementById('statusText');
+  var progressWrap = document.getElementById('progressWrap');
+  var progressFill = document.getElementById('progressFill');
 
-<script>
-function setupBetterCapture() {
-  // Override with better html2canvas-based capture
-  window.startRecording = async function() {
-    if (recording) return;
+  btn.textContent = '⏹ Recording…';
+  btn.classList.add('recording');
+  btn.disabled = false; // keep clickable to cancel
+  document.getElementById('replayBtn').disabled = true;
+  dot.style.display = 'block';
+  progressWrap.style.display = 'block';
+  statusText.textContent = 'Starting…';
 
-    if (!window.MediaRecorder) {
-      showFallbackInstructions();
-      return;
-    }
+  // Replay animation from scratch
+  replayAnimation();
+  await new Promise(function (r) { setTimeout(r, 120); });
 
-    recording = true;
-    const btn = document.getElementById('recordBtn');
-    const dot = document.getElementById('recDot');
-    const statusText = document.getElementById('statusText');
-    const progressWrap = document.getElementById('progressWrap');
-    const progressFill = document.getElementById('progressFill');
+  var poster = document.getElementById('poster');
+  var DURATION_MS = 5800;
+  var FPS = 20;
+  var canvas, ctx, stream;
 
-    btn.textContent = '⏹ Recording…';
-    btn.classList.add('recording');
-    document.getElementById('replayBtn').disabled = true;
-    dot.style.display = 'block';
-    progressWrap.style.display = 'block';
-    statusText.textContent = 'Starting…';
+  try {
+    // First frame to size the canvas
+    var snap0 = await html2canvas(poster, { useCORS: true, allowTaint: true, backgroundColor: '#0E0405', scale: 1.5, logging: false });
+    canvas = document.createElement('canvas');
+    canvas.width = snap0.width;
+    canvas.height = snap0.height;
+    ctx = canvas.getContext('2d');
+    ctx.drawImage(snap0, 0, 0);
+    stream = canvas.captureStream(FPS);
+  } catch (e) {
+    console.error('Canvas setup error:', e);
+    recording = false;
+    stopRecordingUI();
+    alert('Could not initialise canvas capture: ' + e.message);
+    return;
+  }
 
-    // Reset & replay animation
-    replayAnimation();
-    await new Promise(r => setTimeout(r, 80));
+  chunks = [];
+  var mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  var mimeType = '';
+  for (var i = 0; i < mimeTypes.length; i++) {
+    if (MediaRecorder.isTypeSupported(mimeTypes[i])) { mimeType = mimeTypes[i]; break; }
+  }
 
-    const poster = document.getElementById('poster');
-    const DURATION_MS = 5500;
-    const FPS = 25;
+  try {
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType: mimeType, videoBitsPerSecond: 5000000 } : {});
+  } catch (e) {
+    console.error('MediaRecorder init error:', e);
+    stopRecordingUI();
+    alert('MediaRecorder error: ' + e.message);
+    return;
+  }
 
-    // Capture frames using html2canvas
-    const frames = [];
-    const startTime = performance.now();
-
-    // Build a canvas stream
-    const firstSnap = await html2canvas(poster, {
-      useCORS: true, allowTaint: true, backgroundColor: '#0E0405', scale: 2, logging: false
-    });
-    const canvas = document.createElement('canvas');
-    canvas.width = firstSnap.width;
-    canvas.height = firstSnap.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(firstSnap, 0, 0);
-
-    const stream = canvas.captureStream(FPS);
-    chunks = [];
-
-    const mimeTypes = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
-    let mimeType = '';
-    for (const m of mimeTypes) { if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; } }
-
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 6000000 } : {});
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'ramadan-blood-drive-animation.webm';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 8000);
-      stopRecordingUI();
-    };
-
-    mediaRecorder.start();
-    statusText.textContent = 'Recording… 5s';
-
-    // Frame capture loop
-    async function captureLoop() {
-      const elapsed = performance.now() - startTime;
-      const progress = Math.min(elapsed / DURATION_MS, 1);
-      progressFill.style.width = (progress * 100) + '%';
-      const remaining = Math.max(0, Math.ceil((DURATION_MS - elapsed) / 1000));
-      statusText.textContent = `Recording… ${remaining}s`;
-
-      try {
-        const snap = await html2canvas(poster, {
-          useCORS: true, allowTaint: true, backgroundColor: '#0E0405',
-          scale: 2, logging: false, removeContainer: true
-        });
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(snap, 0, 0);
-      } catch(e) { /* skip frame on error */ }
-
-      if (elapsed < DURATION_MS) {
-        setTimeout(captureLoop, 1000 / FPS);
-      } else {
-        mediaRecorder.stop();
-      }
-    }
-
-    captureLoop();
+  mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  mediaRecorder.onstop = function () {
+    var blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'ramadan-blood-drive-animation.webm';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    stopRecordingUI();
   };
+  mediaRecorder.onerror = function (e) {
+    console.error('MediaRecorder error:', e);
+    stopRecordingUI();
+  };
+
+  mediaRecorder.start(200);
+  statusText.textContent = 'Recording… 6s';
+
+  var startTime = performance.now();
+
+  async function captureLoop() {
+    if (!recording) return;
+    var elapsed = performance.now() - startTime;
+    var progress = Math.min(elapsed / DURATION_MS, 1);
+    progressFill.style.width = (progress * 100) + '%';
+    statusText.textContent = 'Recording… ' + Math.max(0, Math.ceil((DURATION_MS - elapsed) / 1000)) + 's';
+
+    try {
+      var snap = await html2canvas(poster, { useCORS: true, allowTaint: true, backgroundColor: '#0E0405', scale: 1.5, logging: false });
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(snap, 0, 0);
+    } catch (e) { /* skip bad frame */ }
+
+    if (elapsed < DURATION_MS) {
+      setTimeout(captureLoop, 1000 / FPS);
+    } else {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }
+  }
+
+  captureLoop();
 }
 </script>
 
