@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ramadan Blood Donation Schedule</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+
+/* ========= BASE ========= */
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+--red:#C8001A;
+--red-deep:#8B0010;
+--red-glow:#FF2235;
+--charcoal:#0E0405;
+--dark:#160809;
+--gold:#D4A843;
+--gold-light:#F0C860;
+--cream:#FFF8F0;
+}
+
+body{
+background:#111;
+font-family:'DM Sans',sans-serif;
+display:flex;
+flex-direction:column;
+align-items:center;
+padding:20px;
+}
+
+/* ========= POSTER ========= */
+
+.poster-wrap{
+width:100%;
+max-width:540px;
+}
+
+.poster-aspect{
+width:100%;
+position:relative;
+padding-bottom:100%;
+}
+
+.poster{
+position:absolute;
+inset:0;
+background:#0E0405;
+overflow:hidden;
+}
+
+/* ========= BACKGROUND ========= */
+
+.bg-base{
+position:absolute;
+inset:0;
+background:#0E0405;
+}
+
+.bg-radial{
+position:absolute;
+inset:0;
+background:
+radial-gradient(ellipse 100% 50% at 50% 100%, rgba(200,0,26,0.35), transparent 65%),
+radial-gradient(ellipse 60% 40% at 100% 0%, rgba(139,0,16,0.2), transparent 55%);
+}
+
+.crescent{
+position:absolute;
+top:-5%;
+right:-8%;
+width:42%;
+aspect-ratio:1;
+border-radius:50%;
+border:2px solid rgba(212,168,67,0.15);
+animation:moonFloat 12s infinite ease-in-out;
+}
+
+.crescent::before{
+content:'';
+position:absolute;
+top:6%;
+right:10%;
+width:82%;
+height:82%;
+border-radius:50%;
+background:#0E0405;
+}
+
+/* ========= STARS ========= */
+
+.star{
+position:absolute;
+background:rgba(212,168,67,0.7);
+border-radius:50%;
+animation:twinkle 4s infinite ease-in-out;
+}
+
+/* ========= CONTENT ========= */
+
+.content{
+position:absolute;
+inset:0;
+padding:5%;
+display:flex;
+flex-direction:column;
+}
+
+/* ========= HEADLINE ========= */
+
+.headline-main{
+font-family:'Bebas Neue';
+font-size:44px;
+color:white;
+line-height:0.9;
+animation:fadeSlide 1s ease forwards;
+}
+
+.headline-main .acc{
+color:var(--red-glow);
+animation:redGlow 2s infinite alternate;
+}
+
+.headline-tagline{
+font-family:'Playfair Display';
+font-style:italic;
+color:rgba(255,255,255,0.6);
+margin-top:6px;
+animation:fadeSlide 1.4s ease forwards;
+}
+
+/* ========= EVENTS ========= */
+
+.events{
+display:flex;
+flex-direction:column;
+gap:10px;
+margin-top:20px;
+}
+
+.event-card{
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(255,255,255,0.07);
+border-left:3px solid var(--red);
+padding:12px;
+animation:cardRise .8s ease forwards;
+}
+
+.event-card:hover{
+transform:translateY(-4px);
+box-shadow:0 10px 30px rgba(200,0,26,0.25);
+transition:.3s;
+}
+
+.event-day-num{
+font-family:'Bebas Neue';
+font-size:36px;
+color:var(--red-glow);
+}
+
+.event-venue{
+font-weight:600;
+color:white;
+}
+
+.target-num{
+font-family:'Bebas Neue';
+font-size:30px;
+color:var(--gold);
+}
+
+/* ========= COUNTER ========= */
+
+.donor-counter{
+margin-top:12px;
+background:rgba(200,0,26,0.15);
+border:1px solid rgba(200,0,26,0.4);
+padding:8px;
+text-align:center;
+font-size:12px;
+letter-spacing:2px;
+color:white;
+}
+
+.counter-num{
+font-family:'Bebas Neue';
+font-size:34px;
+color:var(--gold-light);
+}
+
+/* ========= QR ========= */
+
+.qr{
+margin-top:10px;
+display:flex;
+justify-content:center;
+}
+
+/* ========= BOTTOM ========= */
+
+.bottom-strip{
+margin-top:auto;
+display:flex;
+justify-content:space-between;
+align-items:center;
+font-size:10px;
+color:rgba(255,255,255,0.3);
+}
+
+/* ========= ANIMATIONS ========= */
+
+@keyframes fadeSlide{
+from{opacity:0;transform:translateY(20px)}
+to{opacity:1;transform:translateY(0)}
+}
+
+@keyframes cardRise{
+from{opacity:0;transform:translateY(30px)}
+to{opacity:1;transform:translateY(0)}
+}
+
+@keyframes redGlow{
+from{text-shadow:0 0 6px rgba(255,40,60,0.4)}
+to{text-shadow:0 0 16px rgba(255,40,60,0.9)}
+}
+
+@keyframes twinkle{
+0%{opacity:.2}
+50%{opacity:1}
+100%{opacity:.2}
+}
+
+@keyframes moonFloat{
+0%{transform:translateY(0) rotate(0)}
+50%{transform:translateY(-6px) rotate(3deg)}
+100%{transform:translateY(0) rotate(0)}
+}
+
+/* ========= BUTTON ========= */
+
+button{
+margin-top:20px;
+background:#C8001A;
+border:none;
+padding:12px 20px;
+color:white;
+font-weight:600;
+cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="poster-wrap">
+<div class="poster-aspect">
+
+<div class="poster" id="poster">
+
+<div class="bg-base"></div>
+<div class="bg-radial"></div>
+<div class="crescent"></div>
+
+<div class="star" style="width:3px;height:3px;top:10%;left:70%"></div>
+<div class="star" style="width:2px;height:2px;top:20%;left:80%"></div>
+<div class="star" style="width:3px;height:3px;top:15%;left:60%"></div>
+
+<div class="content">
+
+<div class="headline-main">
+Donate<br>
+<span class="acc">Blood</span><br>
+This Ramadan
+</div>
+
+<p class="headline-tagline">
+Every drop matters — give the gift of life
+</p>
+
+<div class="events">
+
+<div class="event-card">
+<div class="event-day-num">17</div>
+<div class="event-venue">Annajat Complex</div>
+<div class="target-num">50</div>
+</div>
+
+<div class="event-card">
+<div class="event-day-num">18</div>
+<div class="event-venue">OneCity Shopping Centre</div>
+<div class="target-num">50</div>
+</div>
+
+<div class="event-card">
+<div class="event-day-num">19</div>
+<div class="event-venue">RIPAS Hospital — BDC</div>
+<div class="target-num">50</div>
+</div>
+
+</div>
+
+<div class="donor-counter">
+DONORS COLLECTED
+<div class="counter-num" id="counter">0</div>
+</div>
+
+<div class="qr" id="qrcode"></div>
+
+<div class="bottom-strip">
+<span>BDC · RIPAS</span>
+<span>#RamadanBloodDrive</span>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+<button onclick="saveImage()">Save Poster</button>
+
+<script>
+
+/* ===== DONOR COUNTER ===== */
+
+let count=0
+setInterval(()=>{
+count+=Math.floor(Math.random()*2)
+document.getElementById("counter").innerText=count
+},3000)
+
+/* ===== QR CODE ===== */
+
+new QRCode(document.getElementById("qrcode"),{
+text:"https://bloodkad.example",
+width:80,
+height:80
+})
+
+/* ===== SAVE POSTER ===== */
+
+function saveImage(){
+
+html2canvas(document.getElementById("poster"),{
+scale:3
+}).then(canvas=>{
+let link=document.createElement("a")
+link.download="ramadan_blood_drive.png"
+link.href=canvas.toDataURL()
+link.click()
+})
+
+}
+
+</script>
+
+</body>
+</html>
